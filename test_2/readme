@@ -1,0 +1,55 @@
+# rover-stream
+
+Emetteur video minimal en C utilisant la bibliotheque GStreamer.
+Pipeline : source -> capsfilter -> videoconvert -> x264enc -> rtph264pay -> udpsink
+
+## 1. Dependances (Debian / Ubuntu / Raspberry Pi OS)
+
+```bash
+sudo apt update
+sudo apt install build-essential pkg-config \
+  libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+  gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
+  gstreamer1.0-plugins-ugly gstreamer1.0-tools
+```
+
+(x264enc se trouve dans le paquet `gstreamer1.0-plugins-ugly`.)
+
+## 2. Compilation
+
+```bash
+make
+```
+
+## 3. Lancement (emetteur)
+
+```bash
+./rover-stream
+```
+
+Par defaut il envoie vers 127.0.0.1:5000 (boucle locale, pour tester sur une
+seule machine). Modifie DEST_HOST/DEST_PORT en haut de main.c pour viser ton PC.
+
+## 4. Reception (sur le PC qui recoit le flux)
+
+```bash
+gst-launch-1.0 udpsrc port=5000 \
+  caps="application/x-rtp,media=video,encoding-name=H264,payload=96" \
+  ! rtph264depay ! avdec_h264 ! videoconvert ! autovideosink
+```
+
+## 5. Pour le vrai rover
+
+Dans main.c, remplace la ligne :
+
+```c
+gst_element_factory_make("videotestsrc", "source");
+```
+
+par, selon ta camera :
+
+- camera USB :  gst_element_factory_make("v4l2src", "source");
+- camera CSI (RPi Bookworm) : gst_element_factory_make("libcamerasrc", "source");
+
+Et pour decharger le CPU du RPi, remplace x264enc par l'encodeur materiel
+v4l2h264enc (les caps/proprietes different legerement).
